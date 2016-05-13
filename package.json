@@ -1,0 +1,15 @@
+{
+  "name": "node-deputy",
+  "version": "0.0.1",
+  "dependencies": {
+    "request": "^2.72.0"
+  },
+  "description": "Deputy Node Library Using Promises",
+  "main": "index.js",
+  "keywords": [
+    "\"node-deputy\"",
+    "\"deputy\""
+  ],
+  "author": "Liam Neville",
+  "license": "MIT"
+}
