@@ -142,6 +142,7 @@ class Deputy {
       method: 'GET',
       headers: {
         'Authorization': 'OAuth ' + this.token,
+        'Content-Type': 'application/json'
       }
     };
 
@@ -152,6 +153,11 @@ class Deputy {
         if (error) {
           return reject(error)
         }
+
+        if ((typeof body) == 'string') {
+          body = JSON.parse(body);
+        }
+
         resolve(body);
       });
     })
