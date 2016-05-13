@@ -148,7 +148,7 @@ class Deputy {
 
     return new Promise((resolve, reject) => {
       request(args, function(error, responses, body) {
-        console.log(error, responses, body)
+        
 
         if (error) {
           return reject(error)
