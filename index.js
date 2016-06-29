@@ -142,13 +142,14 @@ class Deputy {
       method: 'GET',
       headers: {
         'Authorization': 'OAuth ' + this.token,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Unixtime-Convert-Format': 'C'
       }
     };
 
     return new Promise((resolve, reject) => {
       request(args, function(error, responses, body) {
-        
+
 
         if (error) {
           return reject(error)
