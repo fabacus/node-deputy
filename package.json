@@ -1,8 +1,9 @@
 {
   "name": "node-deputy",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "dependencies": {
-    "request": "^2.72.0"
+    "request": "^2.72.0",
+    "co": "^4.6.0"
   },
   "description": "Deputy Node Library Using Promises",
   "main": "index.js",

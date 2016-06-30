@@ -1,7 +1,8 @@
 'use strict'
 
 const request = require('request');
-
+const co = require('co');
+const deputyApiUrl = '/api/v1/resource/';
 
 class Deputy {
   constructor(url, token) {
@@ -9,193 +10,70 @@ class Deputy {
 
     this.url = url;
     this.token = token;
-    this.resources = [
-      '/api/v1/resource/Address/',
-      '/api/v1/resource/Category/',
-      '/api/v1/resource/Company/',
-      '/api/v1/resource/CompanyPeriod/',
-      '/api/v1/resource/Contact/',
-      '/api/v1/resource/Country/',
-      '/api/v1/resource/CustomAppData/',
-      '/api/v1/resource/CustomField/',
-      '/api/v1/resource/CustomFieldData/',
-      '/api/v1/resource/Employee/',
-      '/api/v1/resource/EmployeeAgreement/',
-      '/api/v1/resource/EmployeeAgreementHistory/',
-      '/api/v1/resource/EmployeeAppraisal/',
-      '/api/v1/resource/EmployeeAvailability/',
-      '/api/v1/resource/EmployeeHistory/',
-      '/api/v1/resource/EmployeePaycycle/',
-      '/api/v1/resource/EmployeePaycycleReturn/',
-      '/api/v1/resource/EmployeeRole/',
-      '/api/v1/resource/EmployeeSalaryOpunitCosting/',
-      '/api/v1/resource/EmployeeWorkplace/',
-      '/api/v1/resource/EmployeeCondition/',
-      '/api/v1/resource/EmployeeContract/',
-      '/api/v1/resource/EmploymentContractLeaveRules/',
-      '/api/v1/resource/Event/',
-      '/api/v1/resource/Geo/',
-      '/api/v1/resource/Journal/',
-      '/api/v1/resource/Kiosk/',
-      '/api/v1/resource/KpiBudget/',
-      '/api/v1/resource/KpiEntry/',
-      '/api/v1/resource/KpiShiftReport/',
-      '/api/v1/resource/Leave/',
-      '/api/v1/resource/LeavePayLine/',
-      '/api/v1/resource/LeaveRules/',
-      '/api/v1/resource/Memo/',
-      '/api/v1/resource/Noticeboard/',
-      '/api/v1/resource/OperationalUnit/',
-      '/api/v1/resource/OpunitKpiMetricConfig/',
-      '/api/v1/resource/PayPeriod/',
-      '/api/v1/resource/PayRules/',
-      '/api/v1/resource/Roster/',
-      '/api/v1/resource/RosterOpen/',
-      '/api/v1/resource/SalesData/',
-      '/api/v1/resource/Schedule/',
-      '/api/v1/resource/SmsLog/',
-      '/api/v1/resource/State/',
-      '/api/v1/resource/SystemUsageBalance/',
-      '/api/v1/resource/SystemUsageTracking/',
-      '/api/v1/resource/Task/',
-      '/api/v1/resource/TaskGroup/',
-      '/api/v1/resource/TaskGroupSetup/',
-      '/api/v1/resource/TaskOpunitConfig/',
-      '/api/v1/resource/TaskSetup/',
-      '/api/v1/resource/Timesheet/',
-      '/api/v1/resource/TimesheetPayReturn/'
-    ];
-
-    this._buildFunctions();
   }
 
-  _buildFunctions() {
+  call(method, path, body, params) {
+    const fullPath = this.url + deputyApiUrl + path;
+    let postBody;
+    let contentType;
+    params = params || {};
 
-    for (let resource of this.resources) {
-
-      this['get' + resource.split('/')[4]] = function(id) {
-        return id ? this._getObject(resource + id) : this._getObject(resource);
-      }
-
-      // this['update' + resource.split('/')[4]] = function(updateObject, id) {
-      //   return id ? this._updateObject(updateObject, resource + id) : throw new Error('missing id for update');
-      // }
-
-      // this['insert' + resource.split('/')[4]] = function(insertObject, id) {
-      //   return id ? this._insertObject(insertObject, resource + id) : throw new Error('missing orderObject');
-      // }
-
-      this['getAll' + resource.split('/')[4]] = function(parameters) {
-        parameters = parameters || {};
-        parameters.format = parameters.format || 'json';
-        parameters.limit = parameters.limit || 0;
-        return this._getObject(resource, parameters);
-      }
+    if (method && method !== 'GET' && body) {
+      throw new Error('In development');
+      //return this._post(method, fullPath, params, postBody, contentType, path, body);
+    } else {
+      return this._getAll(method, fullPath, params);
     }
   }
 
-  // _insertObject(object, resourceUrl) {
+  _getAll(method, fullPath, params) {
+    return co(function*() {
+      let lastCount = 0;
+      let totalCount = 0;
+      let result;
+      let fullResult = [];
+      params.start = totalCount;
 
-  //   object.created_by = object.created_by || this.enterpriseUserUri;
-  //   var callUrl = this.endpoint + resourceUrl;
+      while (true) {
+        result = yield this._request(method, fullPath, params);
+        fullResult.push(...result);
+        lastCount = result.length;
 
-  //   var args = {
-  //     method: 'POST',
-  //     url: callUrl,
-  //     body: JSON.stringify(object),
-  //     format: 'json',
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //       "API-AUTHENTICATION": this.apiKey + ":" + this.apiSecret
-  //     },
+        if (lastCount < 500) break;
 
-  //   }
-  //   return new Promise((resolve, reject) => {
-  //     request(args, function(error, response, body) {
+        totalCount += lastCount;
+        params.start = totalCount;
+      }
+      return fullResult;
+    }.bind(this));
+  }
 
-  //       if (Buffer.isBuffer(body)) {
-  //         reject(
-  //           new Error('something went wrong with the API call \n Request method: POST \n URL: ' + args.url + '\n data: \n ' + body.toString())
-  //         );
-  //       }
-
-  //       if ((typeof body) == 'string') {
-  //         body = JSON.parse(body);
-  //       }
-
-  //     })
-
-  //   });
-
-  // }
-
-
-  _getObject(resource_uri, parameters) {
-
-    // parameters = parameters || { format: "json" };
-
-    const callUrl = this.url + resource_uri;
+  _request(method, fullPath, params, postBody, batch) {
+    let batchLog = batch ? `batch ${batch.batchNo} of ${batch.batchCount}` : '';
+    batchLog += batch && batch.subBatchNo ? `, sub-batch ${batch.subBatchNo} of ${batch.subBatchCount}` : '';
+    const log = `${method} ${fullPath}${params} ${batchLog}`;
+    console.log(log);
 
     const args = {
-      url: callUrl,
-      // qs: parameters,
-      method: 'GET',
+      url: fullPath,
+      method: method,
       headers: {
         'Authorization': 'OAuth ' + this.token,
         'Content-Type': 'application/json',
         'Unixtime-Convert-Format': 'C'
-      }
+      },
+      qs: params
     };
 
     return new Promise((resolve, reject) => {
-      request(args, function(error, responses, body) {
-
-
-        if (error) {
-          return reject(error)
-        }
-
-        if ((typeof body) == 'string') {
-          body = JSON.parse(body);
-        }
-
+      request(args, function(err, response, body) {
+        if (err) return reject(err);
+        body = (typeof body === 'string') ? JSON.parse(body) : body;
         resolve(body);
       });
-    })
+    });
   }
 
-  // _updateObject(object, resource_uri) {
-
-  //   object.resource_uri = resource_uri || object.resource_uri;
-
-  //   var callUrl = this.endpoint + object.resource_uri;
-
-  //   //callUrl = "https://huntsman.revelup.com/resources/Customer/";
-
-  //   var args = {
-  //     url: callUrl,
-  //     body: JSON.stringify(object),
-  //     method: 'PATCH',
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //       "API-AUTHENTICATION": this.apiKey + ":" + this.apiSecret
-  //     }
-  //   };
-
-
-  //   return new Promise((resolve, reject) => {
-  //     request(args, function(error, responses, body) {
-
-  //       if ((typeof body) == 'string') {
-  //         body = JSON.parse(body);
-  //       }
-
-  //     });
-  //   })
-  // }
-
 }
-
-
 
 module.exports = Deputy;
