@@ -1,6 +1,6 @@
 {
   "name": "node-deputy",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "dependencies": {
     "request": "^2.72.0",
     "co": "^4.6.0"
